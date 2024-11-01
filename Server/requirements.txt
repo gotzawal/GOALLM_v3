@@ -1,0 +1,5 @@
+flask
+flask-cors
+pyngrok
+openai
+flask_session
