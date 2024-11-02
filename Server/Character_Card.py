@@ -69,6 +69,7 @@ npc_status = {
 }
 
 goap_status = {
+    "Available Actions": "set_tv_state_on, set_tv_state_off",
     "Available Gestures": "Bashful, Happy, Crying, Thinking, Talking, Looking, No, Fist Pump, Agreeing, Arguing, Thankful, Excited, Clapping, Rejected, Look Around",
     "Item Effects": "use snack: it is eat snack, but you have to write as use. it increase health, use lance: operate lance",
     "Current Plan": ""
@@ -79,6 +80,7 @@ Think: {{user}} has a shoulder injury, will he be able to complete the mission w
 Talk Goal: Hi solder. Let me introduce myself.
 Move Goal: door
 Item Goal: none
+Action Goal: set_tv_state_off
 """
 
 first_user_mes = "Hello. I am {{user}}, the soldier who will escort you."
