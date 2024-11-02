@@ -11,7 +11,7 @@ public class GameManagerServerSet : MonoBehaviour
     public GOAPExample goapExample;
 
     // 서버 URL을 미리 지정
-    private string serverUrl = "https://28c2-2a09-bac1-3f00-518-00-22-114.ngrok-free.app"; // 여기에 실제 서버 URL을 입력
+    private string serverUrl = "https://61dc-2a09-bac5-4728-1a14-00-299-18.ngrok-free.app"; // 여기에 실제 서버 URL을 입력
     private bool isServerUrlSet = true; // 서버 URL 입력을 건너뛰기 위해 true로 설정
 
     [System.Serializable]
@@ -33,6 +33,7 @@ public class GameManagerServerSet : MonoBehaviour
         public string TalkGoal;
         public string MoveGoal;
         public string ItemGoal;
+        public string ActionGoal;
         public string Gesture;
         public string Think;
     }
@@ -92,7 +93,8 @@ public class GameManagerServerSet : MonoBehaviour
                     Debug.Log(response.Gesture);
                     Debug.Log(response.MoveGoal);
                     Debug.Log(response.ItemGoal);
-                    goapExample.SetGoals(response.Gesture, response.MoveGoal, response.ItemGoal);
+                    Debug.Log(response.ActionGoal);
+                    goapExample.SetGoals(response.Gesture, response.MoveGoal, response.ItemGoal, response.ActionGoal);
                 }
                 else
                 {
