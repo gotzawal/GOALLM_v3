@@ -43,6 +43,7 @@ Think: <A short sentence summarizing what {{char}} is thinking>
 Talk Goal: <A short sentence of {{char}}'s speech>
 Move Goal: <Place that {{char}} want to go>
 Item Goal: <"Pick up" or "Drop" or "Use"> <Item that {{char}} want to do someting> at <(Optional) Place that {{char}} want to do someting>
+Action Goal: <One of action of available actions.>
 
 - Please avoid useing same gesture. Use various gesture.
 
@@ -57,6 +58,9 @@ Item Goal: <"Pick up" or "Drop" or "Use"> <Item that {{char}} want to do sometin
 1. Pick up sword
 2. Drop shield at camp
 3. none
+
+- Available actions are below.
+{available_actions}
 
 - Gesture is one of below words.
 {available_gestures}
