@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 public class GOAPAction
 {
@@ -44,6 +45,7 @@ public class GOAPAction
         return true;
     }
 
+
     public (NPCState, WorldState) Apply(NPCState npcState, WorldState worldState)
     {
         NPCState newNpcState = npcState.Copy();
@@ -86,6 +88,29 @@ public class GOAPAction
                     newWorldState.Places[currentLocation].Inventory.Add(itemName);
                 }
             }
+            else if (key.StartsWith("place_state:", StringComparison.OrdinalIgnoreCase))
+            {
+                // "place_state:<placeName>:<stateKey>" 형식의 키 처리
+                var parts = key.Split(':');
+                if (parts.Length == 3)
+                {
+                    string placeName = parts[1].ToLower();
+                    string stateKey = parts[2].ToLower();
+
+                    if (newWorldState.Places.ContainsKey(placeName))
+                    {
+                        newWorldState.Places[placeName].State[stateKey] = value;
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"GOAPAction: Place '{placeName}'을(를) 찾을 수 없습니다.");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning($"GOAPAction: 잘못된 place_state 키 형식 '{key}'.");
+                }
+            }
             else
             {
                 newNpcState.StateData[key] = value;
@@ -107,11 +132,17 @@ public class GOAPAction
             }
         }
 
-        Debug.Log($"Action '{Name}' applied. NPC State: {newNpcState}");
-        Debug.Log($"Action '{Name}' applied. World State: {newWorldState.Places}");
+        // 디버그 로그를 일반화하여 특정 키에 의존하지 않도록 수정
+        Debug.Log($"Action '{Name}' applied. Updated World State:");
+        foreach (var place in newWorldState.Places)
+        {
+            string placeStateInfo = string.Join(", ", place.Value.State.Select(kvp => $"{kvp.Key}:{kvp.Value}"));
+            Debug.Log($" - {place.Key}: {placeStateInfo}");
+        }
 
         return (newNpcState, newWorldState);
     }
+
     private void ApplyUseItem(ref NPCState npcState, ref WorldState worldState, string itemName)
     {
         if (npcState.Inventory.Contains(itemName))
