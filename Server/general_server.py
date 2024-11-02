@@ -56,6 +56,7 @@ def handle_game_state():
         logger.debug(f"NPC Talk Goal: {ai_manager.talk_goal}")
         logger.debug(f"NPC Move Goal: {ai_manager.move_goal}")
         logger.debug(f"NPC Item Goal: {ai_manager.item_goal}")
+        logger.debug(f"NPC Action Goal: {ai_manager.action_goal}")
 
         response = {
             'client_id': client_id,  # Include client_id in the response for future requests
@@ -63,7 +64,8 @@ def handle_game_state():
             'Think': ai_manager.think,
             'TalkGoal': ai_manager.talk_goal,
             'MoveGoal': ai_manager.move_goal,
-            'ItemGoal': ai_manager.item_goal
+            'ItemGoal': ai_manager.item_goal,
+            'ActionGoal' : ai_manager.action_goal
         }
 
         return jsonify(response)
@@ -76,7 +78,8 @@ def handle_game_state():
             'Think': f"[System: An error occurred: {str(e)}]",
             'Talk Goal': f"[System: An error occurred: {str(e)}]",
             'Move Goal': "Error",
-            'Item Goal': "Error"
+            'Item Goal': "Error",
+            'Action Goal': "Error"
         }), 500
 
 @app.route('/api/game', methods=['GET'])
@@ -86,7 +89,8 @@ def get_game_state():
         'Think': "",
         'Talk Goal': "",
         'Move Goal': "",
-        'Item Goal': ""
+        'Item Goal': "",
+        'Action Goal': ""
     })
 
 # Ngrok Setup and Server Run
