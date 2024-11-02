@@ -25,6 +25,7 @@ class Prompting:
         self.talk_goal = ""
         self.move_goal = ""
         self.item_goal = ""
+        self.action_goal = ""
 
         self.debug = False
 
@@ -129,6 +130,12 @@ class Prompting:
         else:
             self.item_goal = api_response.strip()
 
+        action_goal_match = re.search(r"Action Goal: (.+?)(?=\n|$)", api_response, re.DOTALL)
+        if action_goal_match:
+            self.action_goal = action_goal_match.group(1).strip()
+        else:
+            self.action_goal = api_response.strip()
+
     def format_world_status(self, world_status: Dict) -> str:
         return self.world_status_prompt.format(
             time = world_status["Time"],
@@ -149,6 +156,7 @@ class Prompting:
 
     def format_goap_status(self, goap_status: Dict) -> str:
         return self.response_format_prompt.format(
+            available_actions = goap_status["Available Actions"],
             available_gestures = goap_status["Available Gestures"],
             item_effects = goap_status["Item Effects"],
             current_plan = goap_status["Current Plan"]
