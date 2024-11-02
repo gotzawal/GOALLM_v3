@@ -7,66 +7,71 @@ using UnityEngine;
 public class InteractionControl : MonoBehaviour
 {
     [Header("References")]
-    public GOAPExample goapExample; // Assign via Inspector
-    public Transform handTransform; // Assign via Inspector
+    public GOAPExample goapExample; // Inspector에서 할당
+    public Transform handTransform; // Inspector에서 할당
 
     [Header("Items")]
-    public List<ItemObject> items; // Assign via Inspector
+    public List<ItemObject> items; // Inspector에서 할당
 
-    // Dictionary for quick item lookup
+    [Header("Settings")]
+    [Tooltip("아이템이 Place에 자동 할당되기 위한 최대 거리 (단위: 미터)")]
+    public float autoAssignDistanceThreshold = 5f;
+
+    // 빠른 아이템 조회를 위한 딕셔너리
     private Dictionary<string, ItemObject> itemDict;
 
-    // Member Variable to Store Reference to NPCState
+    // NPCState 참조
     private NPCState npcState;
 
     void Start()
     {
-        // Validate references
+        // GOAPExample 참조 유효성 검사
         if (goapExample == null)
         {
             goapExample = FindObjectOfType<GOAPExample>();
             if (goapExample == null)
             {
-                Debug.LogError("GOAPExample script not found in the scene. Please assign it in the InteractionControl.");
+                Debug.LogError("GOAPExample 스크립트를 씬에서 찾을 수 없습니다. InteractionControl에서 할당해주세요.");
                 return;
             }
             else
             {
-                Debug.Log("GOAPExample reference found via FindObjectOfType.");
+                Debug.Log("GOAPExample 참조를 FindObjectOfType를 통해 찾았습니다.");
             }
         }
         else
         {
-            Debug.Log("GOAPExample reference assigned via Inspector.");
+            Debug.Log("GOAPExample 참조가 Inspector를 통해 할당되었습니다.");
         }
 
+        // handTransform 참조 유효성 검사
         if (handTransform == null)
         {
-            Debug.LogError("Hand Transform not assigned in InteractionControl. Please assign it in the Inspector.");
+            Debug.LogError("InteractionControl에서 Hand Transform이 할당되지 않았습니다. Inspector에서 할당해주세요.");
             return;
         }
 
-        // Initialize npcState from goapExample
+        // goapExample으로부터 npcState 초기화
         npcState = goapExample.NpcState;
         if (npcState == null)
         {
-            Debug.LogError("NpcState in GOAPExample is null. Ensure that GOAPExample initializes NpcState correctly.");
+            Debug.LogError("GOAPExample의 NpcState가 null입니다. GOAPExample이 NpcState를 올바르게 초기화하는지 확인해주세요.");
             return;
         }
         else
         {
-            Debug.Log("InteractionControl: npcState successfully obtained from GOAPExample.");
+            Debug.Log("InteractionControl: GOAPExample에서 npcState를 성공적으로 가져왔습니다.");
         }
 
-        // Initialize the item dictionary for quick lookup
+        // 아이템 딕셔너리 초기화
         InitializeItemDictionary();
 
-        // Assign items to their initial Places
+        // 아이템을 초기 장소에 할당
         AssignItemsToPlaces();
     }
 
     /// <summary>
-    /// Initializes the item dictionary for efficient item lookup.
+    /// 빠른 아이템 조회를 위한 딕셔너리를 초기화합니다.
     /// </summary>
     private void InitializeItemDictionary()
     {
@@ -75,13 +80,13 @@ public class InteractionControl : MonoBehaviour
         {
             if (string.IsNullOrEmpty(item.itemName))
             {
-                Debug.LogWarning("An item in InteractionControl has an empty itemName. Please assign a valid name.");
+                Debug.LogWarning("InteractionControl의 아이템 중 itemName이 비어 있습니다. 유효한 이름을 할당해주세요.");
                 continue;
             }
 
             if (item.itemGameObject == null)
             {
-                Debug.LogWarning($"Item '{item.itemName}' does not have an assigned GameObject. Please assign it in the Inspector.");
+                Debug.LogWarning($"아이템 '{item.itemName}'에 GameObject가 할당되지 않았습니다. Inspector에서 할당해주세요.");
                 continue;
             }
 
@@ -91,16 +96,15 @@ public class InteractionControl : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning($"Duplicate itemName detected: '{item.itemName}'. Each item must have a unique name.");
+                Debug.LogWarning($"중복된 itemName이 감지되었습니다: '{item.itemName}'. 각 아이템은 고유한 이름을 가져야 합니다.");
             }
         }
 
-        Debug.Log("InteractionControl: Item dictionary initialized successfully.");
+        Debug.Log("InteractionControl: 아이템 딕셔너리가 성공적으로 초기화되었습니다.");
     }
 
     /// <summary>
-    /// Assigns each item to its initial Place based on their current assigned Place in the Inspector.
-    /// If not assigned, attempts to find the closest Place.
+    /// 아이템을 초기 장소에 할당합니다. Inspector에서 currentPlace가 할당되지 않은 경우, 특정 거리 내에 있는 Place에 자동 할당합니다.
     /// </summary>
     private void AssignItemsToPlaces()
     {
@@ -108,10 +112,12 @@ public class InteractionControl : MonoBehaviour
         {
             if (item.currentPlace != null)
             {
-                // Add the item to the Place's inventory
+                // currentPlace가 GOAPExample.Places에 존재하는지 확인
                 if (!goapExample.Places.ContainsKey(item.currentPlace.Name))
                 {
-                    Debug.LogWarning($"Place '{item.currentPlace.Name}' for item '{item.itemName}' does not exist in GOAPExample.Places.");
+                    Debug.LogWarning($"아이템 '{item.itemName}'의 Place '{item.currentPlace.Name}'가 GOAPExample.Places에 존재하지 않습니다.");
+                    // 자동 할당 시도
+                    AssignToClosestPlaceWithinThreshold(item);
                     continue;
                 }
 
@@ -119,39 +125,50 @@ public class InteractionControl : MonoBehaviour
                 if (!place.Inventory.Contains(item.itemName))
                 {
                     place.Inventory.Add(item.itemName);
-                    Debug.Log($"InteractionControl: Assigned item '{item.itemName}' to Place '{place.Name}'.");
+                    Debug.Log($"InteractionControl: 아이템 '{item.itemName}'을 Place '{place.Name}'에 할당했습니다.");
                 }
 
-                // Ensure the item's GameObject is positioned at the Place
-                item.itemGameObject.transform.position = place.GameObject.transform.position;
-                item.itemGameObject.transform.SetParent(null); // Ensure no parent
+                // 아이템의 GameObject 위치를 Place 위치로 설정하지 않고, 현재 위치 유지
+                // item.itemGameObject.transform.position = place.GameObject.transform.position;
+                // item.itemGameObject.transform.SetParent(null); // 부모 관계 해제
             }
             else
             {
-                // Attempt to find the closest Place based on item's position
-                Place closestPlace = FindClosestPlace(item.itemGameObject.transform.position);
-                if (closestPlace != null)
-                {
-                    closestPlace.Inventory.Add(item.itemName);
-                    item.currentPlace = closestPlace;
-                    item.itemGameObject.transform.position = closestPlace.GameObject.transform.position;
-                    item.itemGameObject.transform.SetParent(null); // Ensure no parent
-                    Debug.Log($"InteractionControl: Automatically assigned item '{item.itemName}' to closest Place '{closestPlace.Name}'.");
-                }
-                else
-                {
-                    Debug.LogWarning($"Item '{item.itemName}' does not have an assigned initial Place and no closest Place was found.");
-                }
+                // Inspector에서 currentPlace가 할당되지 않은 경우, 특정 거리 내에 있는 Place에 자동 할당
+                AssignToClosestPlaceWithinThreshold(item);
             }
         }
     }
 
     /// <summary>
-    /// Finds the closest Place to the given position.
+    /// 아이템을 특정 거리 내에 있는 가장 가까운 Place에 자동 할당합니다.
     /// </summary>
-    /// <param name="position">The position to find the closest Place to.</param>
-    /// <returns>The closest Place object, or null if none found.</returns>
-    private Place FindClosestPlace(Vector3 position)
+    /// <param name="item">할당할 아이템</param>
+    private void AssignToClosestPlaceWithinThreshold(ItemObject item)
+    {
+        Place closestPlace = FindClosestPlace(item.itemGameObject.transform.position, autoAssignDistanceThreshold);
+        if (closestPlace != null)
+        {
+            closestPlace.Inventory.Add(item.itemName);
+            item.currentPlace = closestPlace;
+            // 아이템의 GameObject 위치를 이동시키지 않고 현재 위치 유지
+            // 단, Place의 위치와 아이템의 위치가 근접하게 설정되어야 함
+            item.itemGameObject.transform.SetParent(null); // 부모 관계 해제
+            Debug.Log($"InteractionControl: 아이템 '{item.itemName}'을 가장 가까운 Place '{closestPlace.Name}'에 자동 할당했습니다.");
+        }
+        else
+        {
+            Debug.LogWarning($"아이템 '{item.itemName}'을 할당할 Place를 찾을 수 없습니다. 아이템을 원래 위치에 유지합니다.");
+        }
+    }
+
+    /// <summary>
+    /// 특정 위치에 가장 가까운 Place를 찾습니다. 지정된 거리 이내에 있는지 확인합니다.
+    /// </summary>
+    /// <param name="position">기준 위치</param>
+    /// <param name="distanceThreshold">최대 거리</param>
+    /// <returns>가장 가까운 Place 객체, 없으면 null</returns>
+    private Place FindClosestPlace(Vector3 position, float distanceThreshold)
     {
         float minDistance = Mathf.Infinity;
         Place closestPlace = null;
@@ -160,175 +177,193 @@ public class InteractionControl : MonoBehaviour
         {
             if (place.GameObject == null)
             {
-                Debug.LogWarning($"Place '{place.Name}' does not have a GameObject assigned.");
+                Debug.LogWarning($"Place '{place.Name}'에 GameObject가 할당되지 않았습니다.");
                 continue;
             }
 
             float distance = Vector3.Distance(position, place.GameObject.transform.position);
-            if (distance < minDistance)
+            Debug.Log($"아이템 위치와 Place '{place.Name}' 간의 거리: {distance}");
+
+            if (distance < minDistance && distance <= distanceThreshold)
             {
                 minDistance = distance;
                 closestPlace = place;
             }
         }
 
+        if (closestPlace != null)
+        {
+            Debug.Log($"FindClosestPlace: 가장 가까운 Place는 '{closestPlace.Name}'이며, 거리 {minDistance}입니다.");
+        }
+        else
+        {
+            Debug.LogWarning("FindClosestPlace: 가장 가까운 Place를 찾을 수 없습니다.");
+        }
+
         return closestPlace;
     }
 
     /// <summary>
-    /// Handles the NPC picking up an item.
+    /// NPC가 아이템을 집는 동작을 처리합니다.
     /// </summary>
-    /// <param name="itemName">Name of the item to pick up.</param>
-    /// <param name="npcState">Reference to the NPC's state.</param>
-    /// <param name="worldState">Reference to the world state.</param>
+    /// <param name="itemName">집을 아이템의 이름</param>
+    /// <param name="npcState">NPC의 상태</param>
+    /// <param name="worldState">월드 상태</param>
     public void PickUpItem(string itemName, NPCState npcState, WorldState worldState)
     {
+        Debug.Log($"PickUpItem: 아이템 '{itemName}'을 집으려 합니다.");
+
         if (string.IsNullOrEmpty(itemName))
         {
-            Debug.LogWarning("PickUpItem called with an empty itemName.");
+            Debug.LogWarning("PickUpItem이 빈 itemName으로 호출되었습니다.");
             return;
         }
 
         if (!itemDict.TryGetValue(itemName, out ItemObject item))
         {
-            Debug.LogError($"PickUpItem: Item '{itemName}' not found in InteractionControl.");
+            Debug.LogError($"PickUpItem: 아이템 '{itemName}'을 InteractionControl에서 찾을 수 없습니다.");
             return;
         }
 
         if (npcState.Inventory.Contains(itemName))
         {
-            Debug.LogWarning($"PickUpItem: NPC already has the item '{itemName}' in inventory.");
+            Debug.LogWarning($"PickUpItem: NPC가 이미 아이템 '{itemName}'을 인벤토리에 가지고 있습니다.");
             return;
         }
 
         if (item.currentPlace == null)
         {
-            Debug.LogWarning($"PickUpItem: Item '{itemName}' is not assigned to any Place.");
+            Debug.LogWarning($"PickUpItem: 아이템 '{itemName}'이 어떤 Place에도 할당되지 않았습니다.");
             return;
         }
 
-        // Remove the item from the Place's inventory
+        // Place의 인벤토리에서 아이템 제거
         Place place = item.currentPlace;
         if (place.Inventory.Contains(itemName))
         {
             place.Inventory.Remove(itemName);
-            Debug.Log($"PickUpItem: Removed '{itemName}' from Place '{place.Name}'.");
+            Debug.Log($"PickUpItem: Place '{place.Name}'에서 아이템 '{itemName}'을 제거했습니다.");
         }
         else
         {
-            Debug.LogWarning($"PickUpItem: Place '{place.Name}' does not contain item '{itemName}'.");
+            Debug.LogWarning($"PickUpItem: Place '{place.Name}'에 아이템 '{itemName}'이 존재하지 않습니다.");
         }
 
-        // Add the item to the NPC's inventory
+        // NPC의 인벤토리에 아이템 추가
         npcState.Inventory.Add(itemName);
         npcState.UpperBody["hold"] = itemName;
-        Debug.Log($"PickUpItem: NPC picked up '{itemName}'. Added to inventory.");
+        Debug.Log($"PickUpItem: NPC가 아이템 '{itemName}'을 인벤토리에 추가했습니다.");
 
-        // Attach the item's GameObject to the NPC's hand
+        // 아이템의 GameObject를 NPC의 손에 부착
         item.itemGameObject.transform.SetParent(handTransform);
         item.itemGameObject.transform.localPosition = Vector3.zero;
         item.itemGameObject.transform.localRotation = Quaternion.identity;
-        Debug.Log($"PickUpItem: '{itemName}' attached to NPC's hand.");
+        Debug.Log($"PickUpItem: 아이템 '{itemName}'을 NPC의 손에 부착했습니다.");
+
+        // 아이템의 currentPlace를 null로 설정 (NPC가 소유하게 됨)
+        item.currentPlace = null;
+        Debug.Log($"PickUpItem: 아이템 '{itemName}'의 currentPlace를 null로 설정했습니다.");
     }
 
     /// <summary>
-    /// Handles the NPC dropping an item.
+    /// NPC가 아이템을 놓는 동작을 처리합니다.
     /// </summary>
-    /// <param name="itemName">Name of the item to drop.</param>
-    /// <param name="npcState">Reference to the NPC's state.</param>
-    /// <param name="worldState">Reference to the world state.</param>
+    /// <param name="itemName">놓을 아이템의 이름</param>
+    /// <param name="npcState">NPC의 상태</param>
+    /// <param name="worldState">월드 상태</param>
     public void DropItem(string itemName, NPCState npcState, WorldState worldState)
     {
+        Debug.Log($"DropItem: 아이템 '{itemName}'을 놓으려 합니다.");
+
         if (string.IsNullOrEmpty(itemName))
         {
-            Debug.LogWarning("DropItem called with an empty itemName.");
+            Debug.LogWarning("DropItem이 빈 itemName으로 호출되었습니다.");
             return;
         }
 
         if (!itemDict.TryGetValue(itemName, out ItemObject item))
         {
-            Debug.LogError($"DropItem: Item '{itemName}' not found in InteractionControl.");
+            Debug.LogError($"DropItem: 아이템 '{itemName}'을 InteractionControl에서 찾을 수 없습니다.");
             return;
         }
 
         if (!npcState.Inventory.Contains(itemName))
         {
-            Debug.LogWarning($"DropItem: NPC does not have the item '{itemName}' in inventory.");
+            Debug.LogWarning($"DropItem: NPC가 인벤토리에 아이템 '{itemName}'을 가지고 있지 않습니다.");
             return;
         }
 
-        // Remove the item from the NPC's inventory
+        // NPC의 인벤토리에서 아이템 제거
         npcState.Inventory.Remove(itemName);
         npcState.UpperBody["hold"] = "none";
-        Debug.Log($"DropItem: Removed '{itemName}' from NPC's inventory.");
+        Debug.Log($"DropItem: NPC의 인벤토리에서 아이템 '{itemName}'을 제거했습니다.");
 
-        // Detach the item's GameObject from the hand
+        // 아이템의 GameObject를 손에서 분리
         item.itemGameObject.transform.SetParent(null);
-        Debug.Log($"DropItem: '{itemName}' detached from NPC's hand.");
+        Debug.Log($"DropItem: 아이템 '{itemName}'을 NPC의 손에서 분리했습니다.");
 
-        // Determine the current Place based on NPC's location
+        // NPC의 현재 위치를 기반으로 Place 결정
         string npcLocation = npcState.LowerBody.ContainsKey("location") ? npcState.LowerBody["location"].ToString() : "unknown";
         if (!worldState.Places.TryGetValue(npcLocation, out Place currentPlace))
         {
-            Debug.LogWarning($"DropItem: NPC's current location '{npcLocation}' does not exist in WorldState.Places.");
+            Debug.LogWarning($"DropItem: NPC의 현재 위치 '{npcLocation}'이 WorldState.Places에 존재하지 않습니다.");
             return;
         }
 
-        // Add the item to the current Place's inventory
+        // Place의 인벤토리에 아이템 추가
         currentPlace.Inventory.Add(itemName);
         item.currentPlace = currentPlace;
-        Debug.Log($"DropItem: '{itemName}' added to Place '{currentPlace.Name}' inventory.");
+        Debug.Log($"DropItem: 아이템 '{itemName}'을 Place '{currentPlace.Name}'의 인벤토리에 추가했습니다.");
 
-        // Position the item's GameObject at the Place's location
-        item.itemGameObject.transform.position = currentPlace.GameObject.transform.position;
-        Debug.Log($"DropItem: '{itemName}' positioned at Place '{currentPlace.Name}'.");
+        // 아이템의 GameObject 위치를 Place의 위치로 설정하지 않고, 현재 위치 유지
+        // item.itemGameObject.transform.position = currentPlace.GameObject.transform.position;
+        item.itemGameObject.transform.position = npcLocation == "unknown" ? item.itemGameObject.transform.position : currentPlace.GameObject.transform.position;
+        Debug.Log($"DropItem: 아이템 '{itemName}'의 위치를 Place '{currentPlace.Name}'의 위치로 설정했습니다.");
     }
 
     /// <summary>
-    /// Handles the NPC using an item.
+    /// NPC가 아이템을 사용하는 동작을 처리합니다.
     /// </summary>
-    /// <param name="itemName">Name of the item to use.</param>
-    /// <param name="npcState">Reference to the NPC's state.</param>
-    /// <param name="worldState">Reference to the world state.</param>
+    /// <param name="itemName">사용할 아이템의 이름</param>
+    /// <param name="npcState">NPC의 상태</param>
+    /// <param name="worldState">월드 상태</param>
     public void UseItem(string itemName, NPCState npcState, WorldState worldState)
     {
+        Debug.Log($"UseItem: 아이템 '{itemName}'을 사용하려 합니다.");
+
         if (string.IsNullOrEmpty(itemName))
         {
-            Debug.LogWarning("UseItem called with an empty itemName.");
+            Debug.LogWarning("UseItem이 빈 itemName으로 호출되었습니다.");
             return;
         }
 
         if (!itemDict.TryGetValue(itemName, out ItemObject item))
         {
-            Debug.LogError($"UseItem: Item '{itemName}' not found in InteractionControl.");
+            Debug.LogError($"UseItem: 아이템 '{itemName}'을 InteractionControl에서 찾을 수 없습니다.");
             return;
         }
 
         if (!npcState.Inventory.Contains(itemName))
         {
-            Debug.LogWarning($"UseItem: NPC does not have the item '{itemName}' in inventory.");
+            Debug.LogWarning($"UseItem: NPC가 인벤토리에 아이템 '{itemName}'을 가지고 있지 않습니다.");
             return;
         }
 
-        // Retrieve the IUsableItem component from the item's GameObject
+        // 아이템의 GameObject에서 IUsableItem 컴포넌트 가져오기
         IUsableItem usableItem = item.itemGameObject.GetComponent<IUsableItem>();
         if (usableItem == null)
         {
-            Debug.LogError($"UseItem: Item '{itemName}' does not have a usable script attached.");
+            Debug.LogError($"UseItem: 아이템 '{itemName}'에 사용 가능한 스크립트가 첨부되어 있지 않습니다.");
             return;
         }
 
-        // Execute the item's Use method
+        // 아이템의 Use 메서드 실행
         usableItem.Use();
-        Debug.Log($"UseItem: Executed Use() on '{itemName}'.");
+        Debug.Log($"UseItem: 아이템 '{itemName}'의 Use() 메서드를 실행했습니다.");
 
-        // Handle item effects based on item type
-        // For example, updating NPC's resources
-        // This assumes that item usage effects are handled elsewhere or within the item scripts
+        // 아이템 사용에 따른 효과 처리 (예: NPC의 자원 업데이트 등)
+        // 아이템 사용 효과는 별도의 스크립트나 로직에서 처리된다고 가정합니다.
 
-        // Optionally, if using an item consumes it, you might want to remove it from inventory
-        // But according to your requirement, the item should not disappear
-        // Therefore, we won't remove it from inventory here
+        // 아이템을 사용해도 인벤토리에서 제거하지 않음 (요구사항에 따라 조정 가능)
     }
 }
-
