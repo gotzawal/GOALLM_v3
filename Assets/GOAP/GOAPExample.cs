@@ -10,6 +10,8 @@ using System.Linq; // LINQ 사용을 위해 추가
 
 public class GOAPExample : MonoBehaviour
 {
+    // 기존 코드...
+
     // Inspector-assigned references
     public NavMeshAgent npcAgent;
     public Animator characterAnimator;
@@ -205,27 +207,6 @@ public class GOAPExample : MonoBehaviour
                 }
             ),
             new GOAPAction(
-                name: "turn_on_tv",
-                conditions: new Dictionary<string, Func<NPCState, WorldState, bool>>(StringComparer.OrdinalIgnoreCase)
-                {
-                    { "location", (npc, world) => npc.LowerBody.ContainsKey("location") && npc.LowerBody["location"].ToString().Equals("tv", StringComparison.OrdinalIgnoreCase) },
-                    { 
-                        "tv_power", 
-                        (npc, world) => world.Places.ContainsKey("tv") && world.Places["tv"].State.ContainsKey("tv_state") && world.Places["tv"].State["tv_state"].ToString().Equals("off", StringComparison.OrdinalIgnoreCase)
-                    }
-                },
-                effects: new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
-                {
-                    { "place_state:tv:tv_state", "on" }
-                },
-                cost: new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
-                {
-                    { "time", 0.5f },
-                    { "health", 0f },
-                    { "mental", 0f }
-                }
-            ),
-            new GOAPAction(
                 name: "sit_sofa",
                 conditions: new Dictionary<string, Func<NPCState, WorldState, bool>>(StringComparer.OrdinalIgnoreCase)
                 {
@@ -280,9 +261,43 @@ public class GOAPExample : MonoBehaviour
                     { "health", 0f }, // 건강에 미치는 영향
                     { "mental", 0f } // 정신에 미치는 영향
                 }
+            ),
+            // 'set_tv_state_on' 액션 추가
+            new GOAPAction(
+                name: "set_tv_state_on",
+                conditions: new Dictionary<string, Func<NPCState, WorldState, bool>>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { "is_near_tv", (npc, world) => npc.LowerBody.ContainsKey("location") && npc.LowerBody["location"].ToString().Equals("tv", StringComparison.OrdinalIgnoreCase) }
+                },
+                effects: new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { "place_state:tv:tv_state", "on" }
+                },
+                cost: new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { "time", 0.5f },
+                    { "health", 0f },
+                    { "mental", 0f }
+                }
+            ),
+            // 'set_tv_state_off' 액션 추가
+            new GOAPAction(
+                name: "set_tv_state_off",
+                conditions: new Dictionary<string, Func<NPCState, WorldState, bool>>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { "is_near_tv", (npc, world) => npc.LowerBody.ContainsKey("location") && npc.LowerBody["location"].ToString().Equals("tv", StringComparison.OrdinalIgnoreCase) }
+                },
+                effects: new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { "place_state:tv:tv_state", "off" }
+                },
+                cost: new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { "time", 0.5f },
+                    { "health", 0f },
+                    { "mental", 0f }
+                }
             )
-
-
         };
 
         // Create move actions based on place connections
@@ -344,10 +359,13 @@ public class GOAPExample : MonoBehaviour
         }
     }
 
+
+
     /// <summary>
-    /// Sets goals based on server response and initiates planning and execution
+    /// Sets goals based on server response and initiates planning and execution.
+    /// 이제 네 번째 매개변수 actionGoal을 추가하여 처리합니다.
     /// </summary>
-    public void SetGoals(string gesture, string moveGoal, string itemGoal)
+    public void SetGoals(string gesture, string moveGoal, string itemGoal, string actionGoal)
     {
         if (isExecutingPlan)
         {
@@ -405,6 +423,29 @@ public class GOAPExample : MonoBehaviour
             Debug.Log("GOAPExample: Item goal set.");
         }
 
+        // 4. Validate action goal
+        if (!string.IsNullOrEmpty(actionGoal) && !actionGoal.Equals("none", StringComparison.OrdinalIgnoreCase))
+        {
+            string processedActionGoal = actionGoal.ToLower();
+            // 여기서는 actionGoal의 유효성을 추가로 검증할 수 있습니다.
+            // 예: 특정 액션만 허용하거나, 액션 이름이 사전에 정의되어 있는지 확인 등
+
+            // 예를 들어, 허용된 액션 목록이 있다면 다음과 같이 검증할 수 있습니다:
+            // List<string> allowedActions = new List<string> { "dance", "jump", "wave" };
+            // if (!allowedActions.Contains(processedActionGoal))
+            // {
+            //     Debug.LogError($"GOAPExample: Invalid action goal '{actionGoal}'.");
+            //     return;
+            // }
+
+            // 여기서는 단순히 "Do {actionGoal}" 형태로 파싱합니다.
+            Goal actionGoalObj = GoalParser.ParseSentenceToGoal($"Do {actionGoal}", actions, worldState, weight: 1f);
+            if (actionGoalObj != null)
+                parsedGoals.Add(actionGoalObj);
+
+            Debug.Log("GOAPExample: Action goal set.");
+        }
+
         if (parsedGoals.Count == 0)
         {
             Debug.LogWarning("GOAPExample: No valid goals provided.");
@@ -434,6 +475,9 @@ public class GOAPExample : MonoBehaviour
         }
     }
 
+
+
+
     // Property to get the current NPC status
     public NPCStatus CurrentNPCStatus
     {
@@ -450,9 +494,8 @@ public class GOAPExample : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Coroutine to execute the planned actions sequentially
-    /// </summary>
+
+
     private IEnumerator ExecutePlan(List<GOAPAction> plan)
     {
         isExecutingPlan = true;
@@ -466,21 +509,21 @@ public class GOAPExample : MonoBehaviour
                 string targetPlace = ExtractTargetPlaceFromMoveAction(action.Name);
                 if (!string.IsNullOrEmpty(targetPlace))
                 {
-                    // Update NPC's location
+                    // NPC의 위치 업데이트
                     UpdateNPCLocation(targetPlace);
 
-                    // Wait until the NPC reaches the destination
+                    // NPC가 목적지에 도착할 때까지 대기
                     while (npcAgent.pathPending || npcAgent.remainingDistance > npcAgent.stoppingDistance)
                     {
                         Debug.Log($"GOAPExample: PathPending: {npcAgent.pathPending}, RemainingDistance: {npcAgent.remainingDistance}");
                         yield return null;
                     }
 
-                    // Confirm arrival
+                    // 도착 확인
                     if (!npcAgent.hasPath || npcAgent.velocity.sqrMagnitude == 0f)
                     {
                         Debug.Log($"GOAPExample: Arrived at '{targetPlace}'.");
-                        npcState.LowerBody["location"] = targetPlace; // Update location
+                        npcState.LowerBody["location"] = targetPlace; // 위치 업데이트
                     }
                     else
                     {
@@ -500,11 +543,10 @@ public class GOAPExample : MonoBehaviour
                     characterAnimator.SetTrigger(gestureName);
                     Debug.Log($"GOAPExample: Performing gesture '{gestureName}'.");
 
-                    // Optionally wait for the animation duration
-                    // Example:
-                    // yield return new WaitForSeconds(animationDuration);
+                    // 애니메이션 지속 시간만큼 대기 (옵션)
+                    // 예: yield return new WaitForSeconds(animationDuration);
 
-                    // Apply gesture effects
+                    // 제스처 효과 적용
                     string gestureFlag = $"did_{gestureName.ToLower()}";
                     if (action.Effects.ContainsKey(gestureFlag))
                     {
@@ -538,7 +580,7 @@ public class GOAPExample : MonoBehaviour
                             Debug.Log($"GOAPExample: Dropping item '{itemName}'.");
                         }
 
-                        // Wait for the action's time cost
+                        // 액션의 시간 비용만큼 대기
                         if (action.Cost.ContainsKey("time"))
                         {
                             yield return new WaitForSeconds(action.Cost["time"]);
@@ -570,7 +612,7 @@ public class GOAPExample : MonoBehaviour
                         interaction.UseItem(itemName, npcState, worldState);
                         Debug.Log($"GOAPExample: Using item '{itemName}'.");
 
-                        // Wait for the action's time cost
+                        // 액션의 시간 비용만큼 대기
                         if (action.Cost.ContainsKey("time"))
                         {
                             yield return new WaitForSeconds(action.Cost["time"]);
@@ -593,23 +635,70 @@ public class GOAPExample : MonoBehaviour
             }
             else
             {
-                // Handle other actions (e.g., Think)
-                Debug.Log($"GOAPExample: Executing action '{action.Name}'.");
-
-                if (action.Cost.ContainsKey("time"))
+                // 'place_state' 키를 기반으로 장소 상호작용 처리
+                bool isPlaceInteraction = false;
+                foreach (var effect in action.Effects)
                 {
-                    yield return new WaitForSeconds(action.Cost["time"]);
+                    if (effect.Key.StartsWith("place_state:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        isPlaceInteraction = true;
+                        break;
+                    }
+                }
+
+                if (isPlaceInteraction)
+                {
+                    foreach (var effect in action.Effects)
+                    {
+                        if (effect.Key.StartsWith("place_state:", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var parts = effect.Key.Split(':');
+                            if (parts.Length == 3)
+                            {
+                                string placeName = parts[1].ToLower();
+                                string stateKey = parts[2].ToLower();
+                                object value = effect.Value;
+
+                                UpdatePlaceState(placeName, stateKey, value);
+                                Debug.Log($"GOAPExample: Updated place state '{placeName}.{stateKey}' to '{value}'.");
+
+                                // 액션의 시간 비용만큼 대기
+                                if (action.Cost.ContainsKey("time"))
+                                {
+                                    yield return new WaitForSeconds(action.Cost["time"]);
+                                }
+                                else
+                                {
+                                    yield return null;
+                                }
+                            }
+                            else
+                            {
+                                Debug.LogWarning($"GOAPExample: Invalid place_state format in effect key '{effect.Key}'.");
+                            }
+                        }
+                    }
                 }
                 else
                 {
-                    yield return null;
-                }
+                    // 기타 액션 처리 (예: Think)
+                    Debug.Log($"GOAPExample: Executing action '{action.Name}'.");
 
-                // Apply action effects
-                foreach (var effect in action.Effects)
-                {
-                    npcState.StateData[effect.Key] = effect.Value;
-                    Debug.Log($"GOAPExample: NPCState '{effect.Key}' set to '{effect.Value}'.");
+                    if (action.Cost.ContainsKey("time"))
+                    {
+                        yield return new WaitForSeconds(action.Cost["time"]);
+                    }
+                    else
+                    {
+                        yield return null;
+                    }
+
+                    // 액션 효과 적용
+                    foreach (var effect in action.Effects)
+                    {
+                        npcState.StateData[effect.Key] = effect.Value;
+                        Debug.Log($"GOAPExample: NPCState '{effect.Key}' set to '{effect.Value}'.");
+                    }
                 }
             }
         }
@@ -617,6 +706,10 @@ public class GOAPExample : MonoBehaviour
         isExecutingPlan = false;
         Debug.Log("GOAPExample: Plan execution completed.");
     }
+
+
+
+
 
     /// <summary>
     /// Checks if the action is a move action based on its name
@@ -734,5 +827,38 @@ public class GOAPExample : MonoBehaviour
             }
         }
     }
+
+    /// <summary>
+    /// Place의 상태를 업데이트하고 해당 PlaceInteraction을 호출합니다.
+    /// </summary>
+    /// <param name="placeName">Place의 이름</param>
+    /// <param name="key">상태 키</param>
+    /// <param name="value">새로운 값</param>
+    public void UpdatePlaceState(string placeName, string key, object value)
+    {
+        if (Places.ContainsKey(placeName))
+        {
+            Place place = Places[placeName];
+            place.State[key] = value;
+            Debug.Log($"GOAPExample: Place '{placeName}'의 상태 '{key}'을 '{value}'로 업데이트했습니다.");
+
+            // PlaceInteraction 스크립트 찾기 및 호출
+            PlaceInteraction interaction = place.GameObject.GetComponent<PlaceInteraction>();
+            if (interaction != null)
+            {
+                interaction.OnStateChanged(key, value);
+                Debug.Log($"GOAPExample: PlaceInteraction '{interaction.GetType().Name}'을 통해 상태 변경을 처리했습니다.");
+            }
+            else
+            {
+                Debug.LogWarning($"GOAPExample: Place '{placeName}'에 PlaceInteraction 스크립트가 부착되어 있지 않습니다.");
+            }
+        }
+        else
+        {
+            Debug.LogError($"GOAPExample: Place '{placeName}'을 찾을 수 없습니다.");
+        }
+    }
+
 }
 
