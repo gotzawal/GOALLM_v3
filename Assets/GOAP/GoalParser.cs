@@ -119,7 +119,7 @@ public static class GoalParser
             }
         }
 
-        // 5. "Change <state> of <object> to <value>" 패턴 검사
+        // 6. "Change <state> of <object> to <value>" 패턴 검사
         var matchChangeState = Regex.Match(sentence, @"Change\s+(.+?)\s+of\s+(.+?)\s+to\s+(.+)", RegexOptions.IgnoreCase);
         if (matchChangeState.Success)
         {
