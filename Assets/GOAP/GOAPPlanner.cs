@@ -33,7 +33,7 @@ public class GOAPPlanner
             { initialKey, 0 }
         };
 
-        int maxIterations = 5000; // Reduced from 10000
+        int maxIterations = 1000; // Reduced from 10000
         int iterations = 0;
 
         while (!openList.IsEmpty())
@@ -117,17 +117,18 @@ public class GOAPPlanner
 
     private string GenerateStateKey(NPCState npcState, WorldState worldState, HashSet<string> achievedGoals)
     {
-        // Simplify state representation for faster hashing
+        // 상태 표현을 단순화하여 해싱 속도 향상
         string key = $"{Helpers.MakeHashable(npcState.UpperBody)}|" +
-                     $"{Helpers.MakeHashable(npcState.LowerBody)}|" +
-                     $"{Helpers.MakeHashable(npcState.Resources.Where(kvp => kvp.Key != "time").ToDictionary(kvp => kvp.Key, kvp => kvp.Value))}|" +
-                     $"{string.Join(",", npcState.Inventory.OrderBy(i => i))}|" +
-                     $"{Helpers.MakeHashable(npcState.StateData)}|" +
-                     $"{Helpers.MakeHashable(worldState.Places)}|" +
-                     $"{Helpers.MakeHashable(worldState.Items)}|" +
-                     $"{string.Join(",", achievedGoals.OrderBy(g => g))}";
+                    $"{Helpers.MakeHashable(npcState.LowerBody)}|" +
+                    $"{Helpers.MakeHashable(npcState.Resources.Where(kvp => kvp.Key != "time").ToDictionary(kvp => kvp.Key, kvp => kvp.Value))}|" +
+                    $"{string.Join(",", npcState.Inventory.OrderBy(i => i))}|" +
+                    $"{Helpers.MakeHashable(npcState.StateData)}|" +
+                    $"{Helpers.MakeHashable(worldState.Places)}|" +
+                    $"{Helpers.MakeHashable(worldState.Items)}|" +
+                    $"{string.Join(",", achievedGoals.OrderBy(g => g))}";
         return key;
     }
+
 
     private List<GOAPAction> ReconstructPlan(Dictionary<string, (string, GOAPAction)> cameFrom, string currentKey)
     {
