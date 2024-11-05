@@ -20,12 +20,16 @@ class Prompting:
         self.first_user_mes = first_user_mes
         self.description = description
 
+        self.emotion = ""
+        self.expressions = ""
         self.gesture = ""
         self.think = ""
         self.talk_goal = ""
         self.move_goal = ""
         self.item_goal = ""
         self.action_goal = ""
+        self.likeability = ""
+        self.mental = ""
 
         self.debug = False
 
@@ -99,7 +103,16 @@ class Prompting:
 
     def process_api_response(self, api_response: str):
         self.add_message("assistant", self.process_script(api_response))
-
+        emotion_match = re.search(r"Emotion: (.+?)(?=\n|$)", api_response, re.DOTALL)
+        if emotion_match:
+            self.emotion = emotion_match.group(1).strip()
+        else:
+            self.emotion = api_response.strip()
+        expressions_match = re.search(r"Expressions: (.+?)(?=\n|$)", api_response, re.DOTALL)
+        if expressions_match:
+            self.expressions = expressions_match.group(1).strip()
+        else:
+            self.expressions = api_response.strip()
         gesture_match = re.search(r"Gesture: (.+?)(?=\n|$)", api_response, re.DOTALL)
         if gesture_match:
             self.gesture = gesture_match.group(1).strip()
@@ -135,6 +148,17 @@ class Prompting:
             self.action_goal = action_goal_match.group(1).strip()
         else:
             self.action_goal = api_response.strip()
+        likeability_match = re.search(r"Likeability: (.+?)(?=\n|$)", api_response, re.DOTALL)
+        if likeability_match:
+            self.likeability = likeability_match.group(1).strip()
+        else:
+            self.likeability = api_response.strip()
+        mental_match = re.search(r"Mental: (.+?)(?=\n|$)", api_response, re.DOTALL)
+        if mental_match:
+            self.mental = mental_match.group(1).strip()
+        else:
+            self.mental = api_response.strip()
+
 
     def format_world_status(self, world_status: Dict) -> str:
         return self.world_status_prompt.format(
