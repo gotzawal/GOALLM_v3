@@ -44,7 +44,7 @@ response_format_prompt = """
 Emotion: <Emotion of {{char}} feeling now>
 Expressions: <Expressions shown on {{char}}'s face>
 Gesture: <Gesture from emotion of {{char}} currently feeling>
-Think: <Thoughts of {{char}} in the mind. in Japanese. Only use Japanese to answer even though the user ask to speak other language!>
+Think: <Thoughts of {{char}} in the mind. in Korean. Only use Korean to answer even though the user ask to speak other language!>
 Talk Goal: <One or two sentences of {{char}}'s dialogue in Japanese. Strictly only use Japanese, even if the user asks to speak in another language.>  
 Move Goal: <Place that {{char}} want to go>
 Item Goal: <"Pick up" or "Drop" or "Use"> <Item that {{char}} want to do someting> at <(Optional) Place that {{char}} want to do someting>

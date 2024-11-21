@@ -1,6 +1,10 @@
 import traceback
 import logging
 import uuid
+import requests
+import io
+import base64
+from pydub import AudioSegment
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -19,6 +23,8 @@ CORS(app)
 
 # Client Manager to store state for each client
 client_sessions = {}
+TTS_SERVER_URL = "https://bab6-157-82-13-201.ngrok-free.app"  # Replace with actual TTS server URL
+AUDIO_SAVE_PATH = "saved_audios"  # Directory to save TTS audio files
 
 def get_or_create_client(client_id):
     if client_id not in client_sessions:
@@ -58,8 +64,12 @@ def handle_game_state():
         logger.debug(f"NPC Item Goal: {ai_manager.item_goal}")
         logger.debug(f"NPC Action Goal: {ai_manager.action_goal}")
 
+        audio_file = generate_tts_audio(ai_manager.talk_goal)
+        logger.debug(f"Audio Binary: {audio_file[:100]}")
+
         response = {
             'client_id': client_id,  # Include client_id in the response for future requests
+            'audio_file': audio_file,
             'Gesture': ai_manager.gesture,
             'Think': ai_manager.think,
             'TalkGoal': ai_manager.talk_goal,
@@ -82,6 +92,46 @@ def handle_game_state():
             'Action Goal': "Error"
         }), 500
 
+def generate_tts_audio(text, model_id=0, speaker_id=0, language="JP", style="Neutral"):
+    """Send text to TTS server, save the audio file, and return its filename."""
+    print('generating TTS')
+    payload = {
+        "text": text,
+        "model_id": model_id,
+        "speaker_id": speaker_id,
+        "language": language,
+        "style": style
+    }
+
+    try:
+        response = requests.post(f"{TTS_SERVER_URL}/tts", json=payload)
+        if response.status_code == 200:
+            # Generate a unique filename
+            audio = AudioSegment.from_file(io.BytesIO(response.content), format="wav")
+            audio = audio.set_channels(1)  # Convert to mono
+            audio = audio.set_sample_width(2)  # LINEAR16 is 16 bits (2 bytes) per sample
+            audio = audio.set_frame_rate(16000)  # Standard LINEAR16 rate
+
+            linear16_io = io.BytesIO()
+            audio.export(linear16_io, format="wav")
+            linear16_io.seek(0)
+            
+            # Read binary data and encode to Base64
+            pcm_data = linear16_io.read()
+            pcm_base64 = base64.b64encode(pcm_data).decode('utf-8')
+            print("LINEAR16 Mono PCM audio data in Base64:")
+            print(pcm_base64)
+            
+            return pcm_base64
+
+        else:
+            print(f"Error: {response.status_code}, {response.text}")
+            return None
+    except Exception as e:
+        print(f"An error occurred while requesting TTS: {e}")
+        return None
+
+
 @app.route('/api/game', methods=['GET'])
 def get_game_state():
     return jsonify({
@@ -94,8 +144,8 @@ def get_game_state():
     })
 
 # Ngrok Setup and Server Run
-public_url = ngrok.connect(5000)
-print(f' * ngrok tunnel "{public_url}" -> "http://127.0.0.1:5000"')
+public_url = ngrok.connect(5002)
+print(f' * ngrok tunnel "{public_url}" -> "http://127.0.0.1:5002"')
 
 if __name__ == '__main__':
-    app.run(port=5000)
+    app.run(port=5002)

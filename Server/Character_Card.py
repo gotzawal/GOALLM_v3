@@ -1,4 +1,4 @@
-char_name = "Edelweiss"
+char_name = "Hoshikawa"
 
 description = """## World Setting
 - Era: Near-future Tokyo (approximately 2030)

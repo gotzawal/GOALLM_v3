@@ -1,0 +1,4 @@
+*.wav
+Server/venv
+Server/__pycache__
+Server/key.py
