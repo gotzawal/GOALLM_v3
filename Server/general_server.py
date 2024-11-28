@@ -63,6 +63,9 @@ def handle_game_state():
         logger.debug(f"NPC Move Goal: {ai_manager.move_goal}")
         logger.debug(f"NPC Item Goal: {ai_manager.item_goal}")
         logger.debug(f"NPC Action Goal: {ai_manager.action_goal}")
+        logger.debug(f"NPC Likeability: {ai_manager.likeability}")
+        logger.debug(f"NPC Mental: {ai_manager.mental}")
+        logger.debug(f"NPC Quests: {ai_manager.quest}")
 
         audio_file = generate_tts_audio(ai_manager.talk_goal)
         logger.debug(f"Audio Binary: {audio_file[:100]}")
@@ -75,7 +78,10 @@ def handle_game_state():
             'TalkGoal': ai_manager.talk_goal,
             'MoveGoal': ai_manager.move_goal,
             'ItemGoal': ai_manager.item_goal,
-            'ActionGoal' : ai_manager.action_goal
+            'ActionGoal' : ai_manager.action_goal,
+            'Likeability': ai_manager.likeability,
+            'Mental': ai_manager.mental,
+            'Quests': ai_manager.quest
         }
 
         return jsonify(response)
@@ -89,7 +95,10 @@ def handle_game_state():
             'Talk Goal': f"[System: An error occurred: {str(e)}]",
             'Move Goal': "Error",
             'Item Goal': "Error",
-            'Action Goal': "Error"
+            'Action Goal': "Error",
+            'Likeability': "Error",
+            'Mental': "Error",
+            'Quests': "Error"
         }), 500
 
 def generate_tts_audio(text, model_id=0, speaker_id=0, language="JP", style="Neutral"):

@@ -20,8 +20,6 @@ class Prompting:
         self.first_user_mes = first_user_mes
         self.description = description
 
-        self.emotion = ""
-        self.expressions = ""
         self.gesture = ""
         self.think = ""
         self.talk_goal = ""
@@ -30,6 +28,7 @@ class Prompting:
         self.action_goal = ""
         self.likeability = ""
         self.mental = ""
+        self.quest = ""
 
         self.debug = False
 
@@ -159,6 +158,17 @@ class Prompting:
         else:
             self.mental = api_response.strip()
 
+        # Extract quest status updates
+        self.update_quest_status(api_response)
+
+    def update_quest_status(self, api_response: str):
+        # print('updating quest')
+        # print(api_response)
+        # print('updated quest')
+        quest_status_pattern = r"Quest Name:\s*(.*?)\s*Quest Status:\s*(Cleared|In Progress)"
+        quest_matches = re.findall(quest_status_pattern, api_response)
+        for quest_name, quest_status in quest_matches:
+            self.quests[quest_name] = quest_status
 
     def format_world_status(self, world_status: Dict) -> str:
         return self.world_status_prompt.format(

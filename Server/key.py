@@ -1,2 +1,2 @@
-api_key = ""   # Replace with your actual OpenAI API key
+api_key = ""   # Replace with your actual OpenAI API key 
 ngrok_key = ""
