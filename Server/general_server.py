@@ -23,7 +23,7 @@ CORS(app)
 
 # Client Manager to store state for each client
 client_sessions = {}
-TTS_SERVER_URL = "https://bab6-157-82-13-201.ngrok-free.app"  # Replace with actual TTS server URL
+TTS_SERVER_URL = "https://47db-157-82-13-201.ngrok-free.app"
 AUDIO_SAVE_PATH = "saved_audios"  # Directory to save TTS audio files
 
 def get_or_create_client(client_id):
@@ -65,7 +65,7 @@ def handle_game_state():
         logger.debug(f"NPC Action Goal: {ai_manager.action_goal}")
         logger.debug(f"NPC Likeability: {ai_manager.likeability}")
         logger.debug(f"NPC Mental: {ai_manager.mental}")
-        logger.debug(f"NPC Quests: {ai_manager.quest}")
+        logger.debug(f"NPC Quests: {ai_manager.quests}")
 
         audio_file = generate_tts_audio(ai_manager.talk_goal)
         logger.debug(f"Audio Binary: {audio_file[:100]}")
@@ -81,7 +81,7 @@ def handle_game_state():
             'ActionGoal' : ai_manager.action_goal,
             'Likeability': ai_manager.likeability,
             'Mental': ai_manager.mental,
-            'Quests': ai_manager.quest
+            'Quests': ai_manager.quests
         }
 
         return jsonify(response)
