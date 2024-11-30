@@ -10,8 +10,8 @@ from default_prompt import start_prompt, world_status_prompt, user_status_prompt
 class Prompting:
     def __init__(self, char_name: str, first_char_mes: str, first_user_mes: str, description: str):
         self.user_name = ""
-        self.llm = GPT4o() #클로드로 바꿀 수 있음
-        #self.llm = Claude35Sonnet()
+        self.llm = GPT4o()  # 클로드로 바꿀 수 있음
+        # self.llm = Claude35Sonnet()
 
         self.conversation_history: List[Dict[str, str]] = []
         self.max_context_tokens = 10000
@@ -28,11 +28,11 @@ class Prompting:
         self.action_goal = ""
         self.likeability = ""
         self.mental = ""
-        self.quest = ""
+        self.quests = {}  # 복수형 속성 추가
 
         self.debug = False
 
-    def set_user_name(self, name: str, ):
+    def set_user_name(self, name: str):
         self.user_name = name
         self.update_prompts()  # 사용자 이름이 설정된 후 프롬프트 업데이트
 
@@ -79,13 +79,13 @@ class Prompting:
         user_status = self.user_status_prompt.format(user_speak=user_message)
         self.add_message("user", user_status)
 
-        world_status = self.format_world_status(world_status)
+        world_status_formatted = self.format_world_status(world_status)
         char_status = self.format_char_status(npc_status)
         response_format = self.format_goap_status(goap_status)
 
         api_conversation_history = copy.deepcopy(self.conversation_history)
         api_conversation_history[-1]['content'] = (
-            world_status + "\n" +
+            world_status_formatted + "\n" +
             user_status + "\n" +
             char_status + "\n" +
             response_format
@@ -131,7 +131,7 @@ class Prompting:
             self.talk_goal = api_response.strip()
 
         move_goal_match = re.search(r"Move Goal: (.+?)(?=\n|$)", api_response, re.DOTALL)
-        if talk_goal_match:
+        if move_goal_match:
             self.move_goal = move_goal_match.group(1).strip()
         else:
             self.move_goal = api_response.strip()
@@ -158,7 +158,6 @@ class Prompting:
         else:
             self.mental = api_response.strip()
 
-        # Extract quest status updates
         self.update_quest_status(api_response)
 
     def update_quest_status(self, api_response: str):
@@ -172,28 +171,28 @@ class Prompting:
 
     def format_world_status(self, world_status: Dict) -> str:
         return self.world_status_prompt.format(
-            time = world_status["Time"],
-            region = world_status["Region"],
-            places = world_status["Places"],
-            items = world_status["Items"]
+            time=world_status["Time"],
+            region=world_status["Region"],
+            places=world_status["Places"],
+            items=world_status["Items"]
         )
 
     def format_char_status(self, npc_status: Dict) -> str:
         return self.char_status_prompt.format(
-            location = npc_status["Location"],
-            inventory = npc_status["Inventory"],
-            pose = npc_status["Pose"],
-            holding = npc_status["Holding"],
-            health = npc_status["Health"],
-            mental = npc_status["Mental"]
+            location=npc_status["Location"],
+            inventory=npc_status["Inventory"],
+            pose=npc_status["Pose"],
+            holding=npc_status["Holding"],
+            health=npc_status["Health"],
+            mental=npc_status["Mental"]
         )
 
     def format_goap_status(self, goap_status: Dict) -> str:
         return self.response_format_prompt.format(
-            available_actions = goap_status["Available Actions"],
-            available_gestures = goap_status["Available Gestures"],
-            item_effects = goap_status["Item Effects"],
-            current_plan = goap_status["Current Plan"]
+            available_actions=goap_status["Available Actions"],
+            available_gestures=goap_status["Available Gestures"],
+            item_effects=goap_status["Item Effects"],
+            current_plan=goap_status["Current Plan"]
         )
 
     def build_system_prompt(self):
